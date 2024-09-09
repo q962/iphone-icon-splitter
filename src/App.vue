@@ -5,7 +5,13 @@
         <div class="iphone-icon-box">
           <div class="icon-shadow" v-for="c in 4 * 6" :key="c"></div>
         </div>
-        <input ref="file_input" style="display: none" @change="bg_file_change" type="file" />
+        <input
+          accept=".png, .jpg"
+          ref="file_input"
+          style="display: none"
+          @change="bg_file_change"
+          type="file"
+        />
 
         <v-icon class="upload-icon" size="large" icon="nf nf-md-tray_arrow_up"> </v-icon>
       </div>
