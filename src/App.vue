@@ -39,28 +39,28 @@
         </v-select>
 
         <div class="control-item-box">
-          <number-input :min="0" density="compact" v-model="x_offset" type="number">
+          <number-input :min="0" density="compact" v-model.number="x_offset" type="number">
             <template v-slot:prepend>X偏移</template>
           </number-input>
-          <number-input :min="0" density="compact" v-model="y_offset" type="number">
+          <number-input :min="0" density="compact" v-model.number="y_offset" type="number">
             <template v-slot:prepend>Y偏移</template>
           </number-input>
-          <number-input :min="0" density="compact" v-model="box_width" type="number">
+          <number-input :min="0" density="compact" v-model.number="box_width" type="number">
             <template v-slot:prepend>图宽</template>
           </number-input>
-          <number-input :min="0" density="compact" v-model="box_height" type="number">
+          <number-input :min="0" density="compact" v-model.number="box_height" type="number">
             <template v-slot:prepend>图高</template>
           </number-input>
-          <number-input :min="0" density="compact" v-model="row_count" type="number">
+          <number-input :min="0" density="compact" v-model.number="row_count" type="number">
             <template v-slot:prepend>行数</template>
           </number-input>
-          <number-input :min="0" density="compact" v-model="col_count" type="number">
+          <number-input :min="0" density="compact" v-model.number="col_count" type="number">
             <template v-slot:prepend>列数</template>
           </number-input>
-          <number-input :min="0" density="compact" v-model="row_space" type="number">
+          <number-input :min="0" density="compact" v-model.number="row_space" type="number">
             <template v-slot:prepend>行距</template>
           </number-input>
-          <number-input :min="0" density="compact" v-model="col_space" type="number">
+          <number-input :min="0" density="compact" v-model.number="col_space" type="number">
             <template v-slot:prepend>列距</template>
           </number-input>
         </div>
@@ -119,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import Panzoom from '@panzoom/panzoom'
 import NumberInput from './components/number-input.vue'
 
@@ -190,6 +190,7 @@ function bg_file_change(event: Event) {
   if (target.files) {
     let f = target.files[0]
     let file_url = URL.createObjectURL(f)
+    phone_model.value = ''
 
     var img = new Image()
     img.onload = function () {
@@ -216,6 +217,10 @@ function bg_file_change(event: Event) {
 
 let img_canvas = document.createElement('canvas')
 let img_canvas_ctx = img_canvas.getContext('2d')
+
+function clear_clips() {
+  bg_source_clip_ctx.clearRect(0, 0, bg_source.value!.width, bg_source.value!.height)
+}
 
 function draw_clips() {
   img_canvas.width = box_width.value
@@ -251,65 +256,158 @@ function draw_clips() {
   }
 }
 
-watch(
-  [x_offset, y_offset, box_width, box_height, row_count, col_count, row_space, col_space],
-  (
-    [_x_offset, _y_offset, _box_width, _box_height, _row_count, _col_count, _row_space, _col_space],
-    [
-      _x_offset_old,
-      _y_offset_old,
-      _box_width_old,
-      _box_height_old,
-      _row_count_old,
-      _col_count_old,
-      _row_space_old,
-      _col_spac_old
-    ]
-  ) => {
-    void _x_offset, _y_offset, _row_space, _col_space
-    void _x_offset_old,
-      _y_offset_old,
-      _box_width_old,
-      _box_height_old,
-      _row_count_old,
-      _col_count_old,
-      _row_space_old,
-      _col_spac_old
+function redraw_clips() {
+  block_images_box.value!.innerHTML = ''
+  for (let row_index = 0; row_index < row_count.value; row_index++) {
+    for (let col_index = 0; col_index < col_count.value; col_index++) {
+      let img = document.createElement('img')
+      img.style.width = box_width.value + 'px'
+      img.style.height = box_height.value + 'px'
+      block_images_box.value!.appendChild(img)
+    }
+  }
 
-    if (_row_count_old != _row_count || _col_count_old != _col_count) {
-      block_images_box.value!.innerHTML = ''
-      for (let row_index = 0; row_index < _row_count; row_index++) {
-        for (let col_index = 0; col_index < _col_count; col_index++) {
-          let img = document.createElement('img')
-          img.style.width = _box_width + 'px'
-          img.style.height = _box_height + 'px'
-          block_images_box.value!.appendChild(img)
-        }
+  draw_clips()
+}
+
+// 无法区分触发源
+// 当触发源是 select 时，只需要更新 select 的值和 input 的值。
+// input 的值被多方使用
+let watch_config_stop_cb = watch_config()
+function watch_config() {
+  return watch(
+    [x_offset, y_offset, box_width, box_height, row_count, col_count, row_space, col_space],
+    (
+      [
+        _x_offset,
+        _y_offset,
+        _box_width,
+        _box_height,
+        _row_count,
+        _col_count,
+        _row_space,
+        _col_space
+      ],
+      [
+        _x_offset_old,
+        _y_offset_old,
+        _box_width_old,
+        _box_height_old,
+        _row_count_old,
+        _col_count_old,
+        _row_space_old,
+        _col_spac_old
+      ]
+    ) => {
+      void _x_offset_old,
+        _y_offset_old,
+        _box_width_old,
+        _box_height_old,
+        _row_count_old,
+        _col_count_old,
+        _row_space_old,
+        _col_spac_old
+
+      if (typeof _x_offset == 'string') {
+        x_offset.value = 0
+        return
+      }
+      if (typeof _y_offset == 'string') {
+        y_offset.value = 0
+        return
+      }
+      if (typeof _box_width == 'string') {
+        box_width.value = 0
+        return
+      }
+      if (typeof _box_height == 'string') {
+        box_height.value = 0
+        return
+      }
+      if (typeof _row_count == 'string') {
+        row_count.value = 0
+        return
+      }
+      if (typeof _col_count == 'string') {
+        col_count.value = 0
+        return
+      }
+      if (typeof _row_space == 'string') {
+        row_space.value = 0
+        return
+      }
+      if (typeof _col_space == 'string') {
+        col_space.value = 0
+        return
+      }
+
+      // 只要发生修改就当成是 Custom
+      phone_models.value.Custom[0] = _x_offset
+      phone_models.value.Custom[1] = _y_offset
+      phone_models.value.Custom[2] = _box_width
+      phone_models.value.Custom[3] = _box_height
+      phone_models.value.Custom[4] = _row_count
+      phone_models.value.Custom[5] = _col_count
+      phone_models.value.Custom[6] = _row_space
+      phone_models.value.Custom[7] = _col_space
+      phone_model.value = 'Custom'
+
+      if (
+        _x_offset &&
+        _y_offset &&
+        _box_width &&
+        _box_height &&
+        _row_count &&
+        _col_count &&
+        _row_space &&
+        _col_space
+      ) {
+        if (_box_width_old != _box_width || _box_height_old != _box_height) {
+          redraw_clips()
+        } else draw_clips()
+      } else {
+        block_images_box.value!.innerHTML = ''
+
+        clear_clips()
       }
     }
-    draw_clips()
-  }
-)
+  )
+}
 
-const phone_models = ref<Record<string, () => void>>({
-  'iPhone 14 Pro Max': function () {
-    x_offset.value = 105
-    y_offset.value = 282
-    box_width.value = 192
-    box_height.value = 192
-    row_count.value = 6
-    col_count.value = 4
-    row_space.value = 126
-    col_space.value = 104
-  }
+const phone_models = ref<
+  Record<string, [number, number, number, number, number, number, number, number]>
+>({
+  'iPhone 14 Pro Max': [105, 282, 192, 192, 6, 4, 126, 104],
+  Custom: [0, 0, 0, 0, 0, 0, 0, 0]
 })
+
+function set_config(data: number[]) {
+  x_offset.value = data[0]
+  y_offset.value = data[1]
+  box_width.value = data[2]
+  box_height.value = data[3]
+  row_count.value = data[4]
+  col_count.value = data[5]
+  row_space.value = data[6]
+  col_space.value = data[7]
+}
 
 const phone_models_keys = computed(() => {
   return Object.keys(phone_models.value)
 })
 
-watch(phone_model, (phone_model) => {
-  if (phone_model) phone_models.value[phone_model]?.()
+watch(phone_model, (_phone_model) => {
+  watch_config_stop_cb()
+
+  if (_phone_model) {
+    set_config(phone_models.value[_phone_model])
+  } else {
+    set_config([0, 0, 0, 0, 0, 0, 0, 0])
+  }
+
+  redraw_clips()
+
+  watch_config_stop_cb = watch_config()
 })
 
 function control_hide() {
@@ -410,27 +508,17 @@ function do_paste() {
       let vals = config_str.match(/(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+)/)
       if (!vals || vals.length != 9) throw new TypeError()
 
-      let _x_offset = vals[1]
-      let _y_offset = vals[2]
-      let _box_width = vals[3]
-      let _box_height = vals[4]
-      let _row_count = vals[5]
-      let _col_count = vals[6]
-      let _row_space = vals[7]
-      let _col_space = vals[8]
+      phone_models.value.Custom[0] = parseInt(vals[1])
+      phone_models.value.Custom[1] = parseInt(vals[2])
+      phone_models.value.Custom[2] = parseInt(vals[3])
+      phone_models.value.Custom[3] = parseInt(vals[4])
+      phone_models.value.Custom[4] = parseInt(vals[5])
+      phone_models.value.Custom[5] = parseInt(vals[6])
+      phone_models.value.Custom[6] = parseInt(vals[7])
+      phone_models.value.Custom[7] = parseInt(vals[8])
 
-      phone_models.value['Custom'] = function () {
-        x_offset.value = parseInt(_x_offset)
-        y_offset.value = parseInt(_y_offset)
-        box_width.value = parseInt(_box_width)
-        box_height.value = parseInt(_box_height)
-        row_count.value = parseInt(_row_count)
-        col_count.value = parseInt(_col_count)
-        row_space.value = parseInt(_row_space)
-        col_space.value = parseInt(_col_space)
-      }
       if (phone_model.value == 'Custom') {
-        phone_models.value['Custom']()
+        set_config(phone_models.value.Custom)
       } else {
         phone_model.value = 'Custom'
       }
